@@ -1,14 +1,25 @@
-open System
+#load "helpers.fsx"
 
+open Helpers
 
 let input = System.IO.File.ReadAllLines "./day1_input"
+let parsedInput = input |> Array.map (fun v -> int v)
 
-let tracePrint format a =
-    printfn format a
-    a
+seq {
+    for x in parsedInput do
+        for y in parsedInput do
+            yield (x, y)
+}
+|> Seq.find (fun (x, y) -> x + y = 2020)
+|> fun (x, y) -> x * y
+|> tracePrint "problem1 %A" // 996075
 
-input
-|> Array.windowed 2
-|> Array.filter (fun [| l; r |] -> r > l)
-|> Array.length
-|> tracePrint "problem1: %A"
+seq {
+    for x in parsedInput do
+        for y in parsedInput do
+            for z in parsedInput do
+                yield [ x; y; z ]
+}
+|> Seq.find (fun list -> (list |> List.fold (+) 0) = 2020)
+|> fun list -> list |> List.fold (*) 1
+|> tracePrint "problem2 %A" // 51810360
