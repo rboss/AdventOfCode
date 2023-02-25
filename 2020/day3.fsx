@@ -52,21 +52,14 @@ let traverse step forest =
 
 let step (xStep, yStep) = (fun (x, y) -> (x + xStep, y + yStep))
 
-input 
-|> parseInput 
-|> traverse (step (3, 1)) 
-|> tracePrint "problem1 %i" // 205
+input |> parseInput |> traverse (step (3, 1)) |> tracePrint "problem1 %i" // 205
 
 input
 |> parseInput
 |> (fun forest ->
-    [ step (1, 1)
-      step (3, 1)
-      step (5, 1)
-      step (7, 1)
-      step (1, 2) ]
+    [ step (1, 1); step (3, 1); step (5, 1); step (7, 1); step (1, 2) ]
     |> List.map traverse
     |> List.map (fun traverse -> traverse forest))
-    |> List.map uint
-    |> List.fold (*) 1u
+|> List.map uint
+|> List.fold (*) 1u
 |> tracePrint "problem2 %A" // 205
