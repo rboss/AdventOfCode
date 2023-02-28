@@ -3,36 +3,26 @@
 open System
 open Helpers
 
-type FieldType =
-    | Byr
-    | Iyr
-    | Eyr
-    | Hgt
-    | Hcl
-    | Ecl
-    | Pid
-    | Cid
-
 type Field =
-    | Byr of string //(Birth Year)
-    | Iyr of string //(Issue Year)
-    | Eyr of string //(Expiration Year)
-    | Hgt of string // (Height)
-    | Hcl of string //(Hair Color)
-    | Ecl of string //(Eye Color)
-    | Pid of string //(Passport ID)
-    | Cid of string //(Country ID)
+    | Byr //(Birth Year)
+    | Iyr //(Issue Year)
+    | Eyr //(Expiration Year)
+    | Hgt // (Height)
+    | Hcl //(Hair Color)
+    | Ecl //(Eye Color)
+    | Pid //(Passport ID)
+    | Cid //(Country ID)
 
 let strToFieldType =
     function
-    | "byr" -> FieldType.Byr
-    | "iyr" -> FieldType.Iyr
-    | "eyr" -> FieldType.Eyr
-    | "hgt" -> FieldType.Hgt
-    | "hcl" -> FieldType.Hcl
-    | "ecl" -> FieldType.Ecl
-    | "pid" -> FieldType.Pid
-    | "cid" -> FieldType.Cid
+    | "byr" -> Field.Byr
+    | "iyr" -> Field.Iyr
+    | "eyr" -> Field.Eyr
+    | "hgt" -> Field.Hgt
+    | "hcl" -> Field.Hcl
+    | "ecl" -> Field.Ecl
+    | "pid" -> Field.Pid
+    | "cid" -> Field.Cid
     | str -> failwithf "unexpected fieldtype str: %s" str
 
 let testInput =
@@ -58,33 +48,35 @@ let parseInput input =
     let rec parseRow rows acc =
         match rows with
         | [] -> acc
-        | "" :: tail -> parseRow tail (Set.empty<FieldType> :: acc)
+        | "" :: tail -> parseRow tail (Map.empty<Field, string> :: acc)
         | row :: tail ->
             let newHead =
                 row.Split(" ")
-                |> Array.map (fun item ->
-                    let [| fieldStr; value |] = item.Split(":")
-                    strToFieldType fieldStr)
-                |> Array.fold (fun state v -> Set.add v state) acc.Head
+                |> Array.map (fun item -> item.Split(":"))
+                |> Array.map (fun [| str; value |] -> (strToFieldType str), value)
+                |> Array.fold (fun state (field, value) -> Map.add field value state) acc.Head
 
             parseRow tail (newHead :: acc.Tail)
 
 
 
-    parseRow input [ Set.empty<FieldType> ]
+    parseRow input [ Map.empty<Field, string> ]
 
-let validSet =
-    Set.ofList
-        [ FieldType.Byr
-          FieldType.Iyr
-          FieldType.Eyr
-          FieldType.Hgt
-          FieldType.Hcl
-          FieldType.Ecl
-          FieldType.Pid ]
+let requiredFields =
+    [ Field.Byr; Field.Iyr; Field.Eyr; Field.Hgt; Field.Hcl; Field.Ecl; Field.Pid ]
 
+let fieldExistsMap (field: Field) =
+    Result.bind (fun (passportMap: Map<Field, string>) ->
+        if Map.containsKey field passportMap then
+            Ok passportMap
+        else
+            Error(sprintf "missing field: %A" field))
+
+let requiredFieldsCheck =
+    requiredFields |> List.map fieldExistsMap |> List.reduce (>>)
+//286
 input
 |> parseInput
-|> List.filter (fun set -> Set.isSubset validSet set)
+|> List.filter (fun map -> Ok map |> requiredFieldsCheck |> Result.isOk)
 |> List.length
-|> tracePrint "problem1 %i"
+|> tracePrint "problem1 %i" //254
