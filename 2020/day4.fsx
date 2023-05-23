@@ -1,29 +1,6 @@
 #load "helpers.fsx"
 
-open System
 open Helpers
-
-type Field =
-    | Byr //(Birth Year)
-    | Iyr //(Issue Year)
-    | Eyr //(Expiration Year)
-    | Hgt // (Height)
-    | Hcl //(Hair Color)
-    | Ecl //(Eye Color)
-    | Pid //(Passport ID)
-    | Cid //(Country ID)
-
-let strToFieldType =
-    function
-    | "byr" -> Field.Byr
-    | "iyr" -> Field.Iyr
-    | "eyr" -> Field.Eyr
-    | "hgt" -> Field.Hgt
-    | "hcl" -> Field.Hcl
-    | "ecl" -> Field.Ecl
-    | "pid" -> Field.Pid
-    | "cid" -> Field.Cid
-    | str -> failwithf "unexpected fieldtype str: %s" str
 
 let testInput =
     Array.toList
@@ -43,40 +20,28 @@ let testInput =
 
 let input = System.IO.File.ReadAllLines "./day4_input.txt" |> Array.toList
 
+type Passport = Set<string>
 
-let parseInput input =
+let parseInput input : Passport list =
     let rec parseRow rows acc =
         match rows with
         | [] -> acc
-        | "" :: tail -> parseRow tail (Map.empty<Field, string> :: acc)
+        | "" :: tail -> parseRow tail (Set.empty<string> :: acc)
         | row :: tail ->
             let newHead =
                 row.Split(" ")
                 |> Array.map (fun item -> item.Split(":"))
-                |> Array.map (fun [| str; value |] -> (strToFieldType str), value)
-                |> Array.fold (fun state (field, value) -> Map.add field value state) acc.Head
+                |> Array.map (fun [| str; _ |] -> str)
+                |> Array.fold (fun state str -> Set.add str state) acc.Head
 
             parseRow tail (newHead :: acc.Tail)
 
+    parseRow input [ Set.empty<string> ]
 
+let requiredSet = Set.ofList [ "byr"; "iyr"; "eyr"; "hgt"; "hcl"; "ecl"; "pid" ]
 
-    parseRow input [ Map.empty<Field, string> ]
-
-let requiredFields =
-    [ Field.Byr; Field.Iyr; Field.Eyr; Field.Hgt; Field.Hcl; Field.Ecl; Field.Pid ]
-
-let fieldExistsMap (field: Field) =
-    Result.bind (fun (passportMap: Map<Field, string>) ->
-        if Map.containsKey field passportMap then
-            Ok passportMap
-        else
-            Error(sprintf "missing field: %A" field))
-
-let requiredFieldsCheck =
-    requiredFields |> List.map fieldExistsMap |> List.reduce (>>)
-//286
 input
 |> parseInput
-|> List.filter (fun map -> Ok map |> requiredFieldsCheck |> Result.isOk)
+|> List.filter (fun passport -> Set.isSubset requiredSet passport)
 |> List.length
 |> tracePrint "problem1 %i" //254

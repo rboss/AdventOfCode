@@ -59,6 +59,6 @@ input
 |> (fun forest ->
     [ step (1, 1); step (3, 1); step (5, 1); step (7, 1); step (1, 2) ]
     |> List.map (fun step -> traverse step forest))
-|> List.map uint
-|> List.fold (*) 1u
+|> List.map uint64
+|> List.fold (*) 1UL
 |> tracePrint "problem2 %A" // 205
