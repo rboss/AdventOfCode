@@ -229,4 +229,4 @@ input
 |> validatePassports
 |> List.filter Result.isOk
 |> List.length
-|> tracePrint "problem2 %A" // 205
+|> tracePrint "problem2 %A" // 184
