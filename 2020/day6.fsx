@@ -17,18 +17,16 @@ let parseAnswers answers : GroupAnswers list =
 
     parseRow answers [ [] ]
 
-let groupUniqueAnswers group = group |> Set.unionMany |> Set.count
+let groupUniqueAnswers = Set.unionMany >> Set.count
 
 parseAnswers input
 |> List.map groupUniqueAnswers
-|> List.reduce (+)
-|> tracePrint "problem1 %i"
+|> List.sum
+|> tracePrint "problem1 %i" //6726
 
-
-let groupSameAnswers group =
-    group |> List.reduce Set.intersect |> Set.count
+let groupSameAnswers = List.reduce Set.intersect >> Set.count
 
 parseAnswers input
 |> List.map groupSameAnswers
-|> List.reduce (+)
-|> tracePrint "problem2 %i"
+|> List.sum
+|> tracePrint "problem2 %i" // 3316

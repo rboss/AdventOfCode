@@ -16,3 +16,7 @@ or
 ### Fake?
 https://fake.build/guide/getting-started.html
 
+
+## Other solutions/examples
+
+https://www.youtube.com/@JoVanEyck/videos
