@@ -37,6 +37,7 @@ let changeBag newParentBag exist =
     | Some v -> Some(newParentBag :: v)
     | None -> Some [ newParentBag ]
 
+
 let foldInnerOut acc [ bag, (innerBag, amount) ] = Map.change innerBag (changeBag bag) acc
 
 let getInnerOutLookupMap str =
@@ -59,7 +60,6 @@ lookupBags bagMap "shiny gold"
 |> Set.count
 |> (+) -1
 |> tracePrint "problem1 %i" //197
-
 
 let foldTopDown acc [ bag, (innerBag, amount) ] =
     Map.change bag (changeBag (innerBag, int amount)) acc
