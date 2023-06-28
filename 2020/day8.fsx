@@ -88,9 +88,3 @@ input
 |> Array.map parseInstruction
 |> findAndFixProgram
 |> tracePrint "problem2: %i"
-
-// index 163
-
-
-// modifying index 161, inst Jmp 385
-// modifying index 163, inst Jmp 159
