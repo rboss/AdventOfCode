@@ -20,3 +20,4 @@ https://fake.build/guide/getting-started.html
 ## Other solutions/examples
 
 https://www.youtube.com/@JoVanEyck/videos
+https://github.com/jovaneyck/advent-of-code-2020/tree/main/day11

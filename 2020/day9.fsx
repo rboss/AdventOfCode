@@ -48,14 +48,14 @@ let findContinousSet (values: int64 list) target =
     let rec pickNextValue list (acc, sequence) =
         match list with
         | nextValue :: _ when nextValue + acc = target-> 
-            (sequence @ [v])
+            (nextValue :: sequence)
         | nextValue :: _ when nextValue + acc > target-> 
             match sequence with 
             | [] -> pickNextValue list (acc, [])
             | head :: [] -> pickNextValue list (acc - head, [])
             | head :: tail -> pickNextValue list (acc - head, tail)
-        | v :: rest -> 
-            pickNextValue rest (v + acc, sequence @ [v])
+        | nextValue :: rest -> 
+            pickNextValue rest (nextValue + acc, sequence @ [nextValue])
         | [] -> failwith "did not find continous sum value in list"
 
 
