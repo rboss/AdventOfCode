@@ -81,3 +81,21 @@ let mapP f parser =
         | Failure err -> Failure err
 
     Parser innerFn
+
+let pint =
+    // helper
+    let resultToInt (sign,charList) =
+        let i = charList |> List.toArray |> System.String |> int
+        match sign with
+        | Some ch -> -i  // negate the int
+        | None -> i
+
+    // define parser for one digit
+    let digit = anyOf ['0'..'9']
+
+    // define parser for one or more digits
+    let digits = many1 digit
+
+    // parse and convert
+    opt (pchar '-') .>>. digits
+    |>> resultToInt
