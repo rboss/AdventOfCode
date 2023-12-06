@@ -1,101 +1,213 @@
 
-module Parser
+module Shared
+fsi.ShowDeclarationValues <- false
 
-open System
+let inline charToInt c = int c - int '0'
 
-type ParseResult<'a> =
-    | Success of 'a
-    | Failure of string
+let (|Regex|_|) pattern str =
+    let m = System.Text.RegularExpressions.Regex.Match(str, pattern)
 
-type Parser<'T> = Parser of (string -> ParseResult<'T * string>)
+    if m.Success then
+        Some(List.tail [ for x in m.Groups -> x.Value ])
+    else
+        None
 
-let satisfy predicate =
-    let innerFn str = 
-        if String.IsNullOrEmpty(str) then
-            Failure "No more input"
-        else
-            let first = str.[0]
-            if predicate first then
-                let remaining = str.[1..]
-                Success (first, remaining)
+let tracePrint format a =
+    printfn format a
+    a
+
+module Parser = 
+
+    open System
+
+    type ParseResult<'a> =
+        | Success of 'a
+        | Failure of string
+
+    type Parser<'T> = Parser of (string -> ParseResult<'T * string>)
+
+    let satisfy predicate =
+        let innerFn str = 
+            if String.IsNullOrEmpty(str) then
+                Failure "No more input"
             else
-                let msg = sprintf "Unexpected '%c'" first
-                Failure msg
-    Parser innerFn
+                let first = str.[0]
+                if predicate first then
+                    let remaining = str.[1..]
+                    Success (first, remaining)
+                else
+                    let msg = sprintf "Unexpected '%c'" first
+                    Failure msg
+        Parser innerFn
 
-let pchar charToMatch =
-  let predicate ch = charToMatch = ch
-  satisfy predicate
+    let pchar charToMatch =
+        let predicate ch = charToMatch = ch
+        satisfy predicate
 
-let run parser input =
-  // unwrap parser to get inner function
-  let (Parser innerFn) = parser
-  // call inner function with input
-  innerFn input
+    let run parser input =
+        // unwrap parser to get inner function
+        let (Parser innerFn) = parser
+        // call inner function with input
+        innerFn input
 
-let andThen parser1 parser2 =
-    let innerFn input =
-        // run parser1 with the input
-        let result1 = run parser1 input
-
-        // test the result for Failure/Success
-        match result1 with
-        | Failure err -> Failure err
-        | Success (value1,remaining1) ->
-            // run parser2 with the remaining input
-            let result2 =  run parser2 remaining1
+    let andThen parser1 parser2 =
+        let innerFn input =
+            // run parser1 with the input
+            let result1 = run parser1 input
 
             // test the result for Failure/Success
-            match result2 with
+            match result1 with
+            | Failure err -> Failure err
+            | Success (value1,remaining1) ->
+                // run parser2 with the remaining input
+                let result2 =  run parser2 remaining1
+
+                // test the result for Failure/Success
+                match result2 with
+                | Failure err ->
+                    // return error from parser2
+                    Failure err
+
+                | Success (value2,remaining2) ->
+                    // combine both values as a pair
+                    let newValue = (value1,value2)
+                    // return remaining input after parser2
+                    Success (newValue,remaining2)
+
+        // return the inner function
+        Parser innerFn
+
+    let orElse parser1 parser2 = 
+        let innerFn input =
+            let result1 = run parser1 input
+            match result1 with 
+            | Success _ -> result1
             | Failure err ->
-                // return error from parser2
+                let result2 = run parser2 input
+                result2
+        Parser innerFn
+
+    let mapP f parser = 
+        let innerFn input =
+            let result = run parser input
+
+            match result with 
+            | Success (value, remaining) -> 
+                let newValue = f value 
+                Success(newValue, remaining)
+            | Failure err -> Failure err
+
+        Parser innerFn
+
+    let (<|>) = orElse
+    let (<!>) = mapP
+    let (.>>.) = andThen
+    let ( |>> ) x f = mapP f x
+
+    let choice listOfParsers = 
+        List.reduce (<|>) listOfParsers
+
+    let anyOf listOfChars = 
+        listOfChars 
+        |> List.map pchar
+        |> choice
+
+    let applyP fP xP =
+        // create a Parser containing a pair (f,x)
+        (fP .>>. xP)
+        // map the pair by applying f to x
+        |> mapP (fun (f,x) -> f x)
+
+    let returnP x =
+        let innerFn input =
+            // ignore the input and return x
+            Success (x,input )
+        // return the inner function
+        Parser innerFn
+        
+    let ( <*> ) = applyP
+
+    let lift2 f xP yP =
+        returnP f <*> xP <*> yP
+
+    let rec sequence parserList =
+        // define the "cons" function, which is a two parameter function
+        let cons head tail = head::tail
+    
+        // lift it to Parser World
+        let consP = lift2 cons
+    
+        // process the list of parsers recursively
+        match parserList with
+        | [] ->
+            returnP []
+        | head::tail ->
+            consP head (sequence tail)
+        
+    let rec parseZeroOrMore parser input =
+        let firstResult = run parser input
+
+        match firstResult with
+        | Success (firstValue,inputAfterFirstParse) ->
+            // if parse succeeds, call recursively
+            // to get the subsequent values
+            let (subsequentValues,remainingInput) = parseZeroOrMore parser inputAfterFirstParse
+            let values = firstValue::subsequentValues
+            (values,remainingInput)
+        | Failure err -> 
+            ([], input)
+
+    let many parser =
+        let innerFn input =
+            // parse the input -- wrap in Success as it always succeeds
+            Success (parseZeroOrMore parser input)
+        Parser innerFn
+
+    let many1 parser = 
+        let innerFn input = 
+            let firstResult = run parser input
+
+            match firstResult with 
+            | Failure (err) -> 
                 Failure err
+            | Success (firstResult, inputAfterFirstParser) -> 
+                let (subsequentValues, remainingInput) = parseZeroOrMore parser inputAfterFirstParser 
+                Success (firstResult :: subsequentValues, remainingInput)
 
-            | Success (value2,remaining2) ->
-                // combine both values as a pair
-                let newValue = (value1,value2)
-                // return remaining input after parser2
-                Success (newValue,remaining2)
+        Parser innerFn
 
-    // return the inner function
-    Parser innerFn
+    let opt p =
+        let some = p |>> Some
+        let none = returnP None
+        some <|> none 
 
-let orElse parser1 parser2 = 
-    let innerFn input =
-        let result1 = run parser1 input
-        match result1 with 
-        | Success _ -> result1
-        | Failure err ->
-            let result2 = run parser2 input
-            result2
-    Parser innerFn
+    let pint =
+        // helper
+        let resultToInt (sign,charList) =
+            let i = charList |> List.toArray |> System.String |> int
+            match sign with
+            | Some ch -> -i  // negate the int
+            | None -> i
 
-let mapP f parser = 
-    let innerFn input =
-        let result = run parser input
+        // define parser for one digit
+        let digit = anyOf ['0'..'9']
 
-        match result with 
-        | Success (value, remaining) -> 
-            let newValue = f value 
-            Success(newValue, remaining)
-        | Failure err -> Failure err
+        // define parser for one or more digits
+        let digits = many1 digit
 
-    Parser innerFn
+        // parse and convert
+        opt (pchar '-') .>>. digits 
+        |>> resultToInt
 
-let pint =
-    // helper
-    let resultToInt (sign,charList) =
-        let i = charList |> List.toArray |> System.String |> int
-        match sign with
-        | Some ch -> -i  // negate the int
-        | None -> i
+    let charListToStr charList =
+        charList |> List.toArray |> System.String
 
-    // define parser for one digit
-    let digit = anyOf ['0'..'9']
-
-    // define parser for one or more digits
-    let digits = many1 digit
-
-    // parse and convert
-    opt (pchar '-') .>>. digits
-    |>> resultToInt
+    let pstring str = 
+        str 
+        |> List.ofSeq
+        |> List.map pchar
+        |> sequence
+        |> mapP charListToStr
+            
+    let pany = 
+        satisfy (fun _ -> true )
