@@ -104,6 +104,34 @@ module Parser =
     let (.>>.) = andThen
     let ( |>> ) x f = mapP f x
 
+    let (.>>) p1 p2 =
+        // create a pair
+        p1 .>>. p2
+        // then only keep the first value
+        |> mapP (fun (a,b) -> a)
+    
+    let (>>.) p1 p2 =
+        // create a pair
+        p1 .>>. p2
+        // then only keep the second value
+        |> mapP (fun (a,b) -> b)
+
+    let bindP f p = 
+        let innerFn input =
+            let result1 = run p input
+            match result1 with
+            | Failure err ->
+                // return error from parser1
+                Failure err
+            | Success (value1,remainingInput) ->
+                // apply f to get a new parser
+                let p2 = f value1
+                // run parser with remaining input
+                run p2 remainingInput
+        Parser innerFn
+    
+    let (>>=) p f = bindP f p
+
     let choice listOfParsers = 
         List.reduce (<|>) listOfParsers
 
@@ -211,3 +239,6 @@ module Parser =
             
     let pany = 
         satisfy (fun _ -> true )
+
+    let whitespaceChar = 
+        satisfy Char.IsWhiteSpace
