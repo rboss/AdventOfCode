@@ -18,27 +18,24 @@ let exampleInput =
 
 let inputIndexed = Array.indexed input
 
-let deltas =
+let getAdjacentPos set (y, x) =
     [ (-1, -1); (0, -1); (1, -1); (-1, 0); (1, 0); (-1, 1); (0, 1); (1, 1) ]
-
-let addAdjacent set (y, x) =
-    deltas
     |> List.fold (fun innerSet (dy, dx) -> Set.add (y + dy, x + dx) innerSet) set
 
-let collectSymbols criteria (rowIndex, row) =
+let getRowSymbols criteria (rowIndex, row) =
     row
     |> Seq.indexed
     |> Seq.choose (fun (colIndex, char) -> if criteria char then Some(rowIndex, colIndex) else None)
     |> Seq.toArray
 
 let isNotDigitOrDot char =
-    char <> '.' && not (System.Char.IsLetterOrDigit(char))
+    char <> '.' && not (System.Char.IsDigit(char))
 
 let symbolsAdjacentPos =
     inputIndexed
-    |> Array.map (collectSymbols isNotDigitOrDot)
+    |> Array.map (getRowSymbols isNotDigitOrDot)
     |> Array.collect id
-    |> Array.fold addAdjacent Set.empty
+    |> Array.fold getAdjacentPos Set.empty
 
 let findNumbers (rowIndex, line) =
     line
@@ -69,46 +66,42 @@ let findNumbersRegex (rowIndex, line) =
         set, res.Value)
     |> Seq.toArray
 
-let numbers =
+let numbers_old =
     inputIndexed |> Array.map findNumbers |> Array.toList |> List.collect id
 
-let numbers2 = inputIndexed |> Array.map findNumbersRegex |> Array.collect id
+let numbers = inputIndexed |> Array.map findNumbersRegex |> Array.collect id
 
-numbers
+numbers_old
 |> List.filter (fun (positions, _) -> Set.intersect symbolsAdjacentPos (Set.ofList positions) |> Set.isEmpty |> not)
 |> List.map (fun (_, str) -> (int) str)
 |> List.sum
 |> tracePrint "Day1.1: %i"
 
-numbers2
+numbers
 |> Array.filter (fun (numberPosSet, _) -> not (Set.isEmpty (Set.intersect symbolsAdjacentPos numberPosSet)))
 |> Array.map (fun (_, str) -> (int) str)
 |> Array.sum
 |> tracePrint "Day1.1: %i"
 
+
 let isStar char = char = '*'
 
 let starPositions =
-    inputIndexed |> Array.map (collectSymbols isStar) |> Array.collect id
-
-let setNumbers =
-    numbers
-    |> List.filter (fun (posList, _) -> posList <> [])
-    |> List.map (fun (posList, str) -> Set.ofList posList, str)
+    inputIndexed |> Array.map (getRowSymbols isStar) |> Array.collect id
 
 let findAdjacentNumbers setNumbers pos =
-    let starSet = addAdjacent Set.empty pos
+    let starSet = getAdjacentPos Set.empty pos
 
     setNumbers
-    |> List.choose (fun (posSet, str) ->
+    |> Array.choose (fun (posSet, str) ->
         if Set.isEmpty (Set.intersect posSet starSet) then
             None
         else
             Some str)
 
 starPositions
-|> Array.map (findAdjacentNumbers setNumbers)
-|> Array.filter (fun list -> List.length list = 2)
-|> Array.map (fun ([ left; right ]) -> (int) left * (int) right)
+|> Array.map (findAdjacentNumbers numbers)
+|> Array.filter (fun list -> Array.length list = 2)
+|> Array.map (fun ([| left; right |]) -> (int) left * (int) right)
 |> Array.sum
 |> tracePrint "Day2.2: %i"
