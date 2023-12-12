@@ -246,6 +246,24 @@ module Parser =
         // parse and convert
         opt (pchar '-') .>>. digits |>> resultToInt
 
+    let pint64 =
+        // helper
+        let resultToInt (sign, charList) =
+            let i = charList |> List.toArray |> System.String |> int64
+
+            match sign with
+            | Some ch -> -i // negate the int
+            | None -> i
+
+        // define parser for one digit
+        let digit = anyOf [ '0' .. '9' ]
+
+        // define parser for one or more digits
+        let digits = many1 digit
+
+        // parse and convert
+        opt (pchar '-') .>>. digits |>> resultToInt
+
     let charListToStr charList =
         charList |> List.toArray |> System.String
 
@@ -255,3 +273,9 @@ module Parser =
     let pany = satisfy (fun _ -> true)
 
     let whitespaceChar = satisfy Char.IsWhiteSpace
+
+    let sepBy1 p sep = 
+        let sepThenP = sep >>. p
+        p .>>. many sepThenP
+        |>> (fun (p, pList) -> p :: pList)
+
