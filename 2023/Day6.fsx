@@ -5,7 +5,7 @@ let input2 = [ (48_938_595, 296_192_812_361_391.0) ]
 
 let quadratic (b, c) =
     let a = 1.0
-    let squareRoot = (System.Math.Sqrt(b * b - 4.0 * a * c))
+    let squareRoot = System.Math.Sqrt(b * b - 4.0 * a * c)
     let dividend = (-1.0 * b)
     let divisor = 2.0 * a
     (dividend - squareRoot) / divisor, (dividend + squareRoot) / divisor
@@ -20,8 +20,8 @@ let problem data =
     |> List.map waysToWin
     |> List.reduce (*)
 
-problem exampleInput |> printfn "Day6 1.ex %i"
-problem input |> printfn "Day6 1.ex %i"
+problem exampleInput |> printfn "Day6 1.ex: %i"
+problem input |> printfn "Day6 1: %i"
 
-problem exampleInput2 |> printfn "Day6 2.ex %i"
-problem input2 |> printfn "Day6 2.ex %i"
+problem exampleInput2 |> printfn "Day6 2.ex: %i"
+problem input2 |> printfn "Day6 2: %i"
