@@ -11,7 +11,7 @@ let quadratic (b, c) =
     (dividend - squareRoot) / divisor, (dividend + squareRoot) / divisor
 
 let waysToWin (lower, upper) =
-    [| ceil lower .. floor upper |] |> Array.except [ lower; upper ] |> Array.length
+    int (ceil upper - floor lower  - 1.0)
 
 let problem data =
     data
