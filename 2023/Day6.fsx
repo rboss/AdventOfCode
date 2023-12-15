@@ -10,8 +10,7 @@ let quadratic (b, c) =
     let divisor = 2.0 * a
     (dividend - squareRoot) / divisor, (dividend + squareRoot) / divisor
 
-let waysToWin (lower, upper) =
-    [| ceil lower .. floor upper |] |> Array.except [ lower; upper ] |> Array.length
+let waysToWin (lower, upper) = int (ceil upper - floor lower - 1.0)
 
 let problem data =
     data
