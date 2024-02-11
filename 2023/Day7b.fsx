@@ -64,8 +64,6 @@ let parseHand cards =
     | [ _; _; _; _ ] -> OnePair cards
     | _ -> HighCard cards
 
-parseHand [ Queen; Queen; King; King; Joker ]
-
 let parsePlay (row: string) : Play =
     let [| strHand; strBid |] = row.Split(' ', 2)
 
