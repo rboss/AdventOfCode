@@ -1,4 +1,3 @@
-
 type Card =
     | Ace
     | King
@@ -47,33 +46,23 @@ let charToCardMap =
 let parseCards str =
     str |> Seq.map (fun c -> Map.find c charToCardMap) |> Seq.toList
 
-
 let parseHand cards =
-    let (jokers, rest) = List.partition (fun card -> card = Joker) cards
-    let restCountSorted = List.countBy id rest |> List.map snd |> List.sortDescending
+    let noJokerCardsSorted =
+        cards
+        |> List.filter (fun card -> card <> Joker)
+        |> List.countBy id
+        |> List.map snd
+        |> List.sortDescending
 
-    match restCountSorted, jokers.Length with
-    | [ _ ], 0 -> FiveOfAKind cards
-    | [], 5 -> FiveOfAKind cards
-    | [ _ ], _ -> FiveOfAKind cards
-
-    | [ 4; _ ], 0 -> FourOfAKind cards
-    | [ _; 1 ], _ -> FourOfAKind cards
-
-    | [ 3; 2 ], 0 -> FullHouse cards
-    | [ 2; 2 ], 1 -> FullHouse cards
-
-    | [ 3; _; _ ], 0 -> ThreeOfAKind cards
-    | [ _; _; _ ], x when x > 0 -> ThreeOfAKind cards
-
-    | [ 2; 2; _ ], 0 -> TwoPairs cards
-
-    | [ 2; _; _; _ ], 0 -> OnePair cards
-    | [ _; _; _; _ ], 1 -> OnePair cards
+    match noJokerCardsSorted with
+    | []
+    | [ _ ] -> FiveOfAKind cards
+    | [ _; 1 ] -> FourOfAKind cards
+    | [ _; _ ] -> FullHouse cards
+    | [ 2; 2; 1 ] -> TwoPairs cards
+    | [ _; _; _ ] -> ThreeOfAKind cards
+    | [ _; _; _; _ ] -> OnePair cards
     | _ -> HighCard cards
-
-
-parseHand [ Queen; Queen; King; King; Joker ]
 
 let parsePlay (row: string) : Play =
     let [| strHand; strBid |] = row.Split(' ', 2)
@@ -89,10 +78,10 @@ let problem2 data =
     |> Array.map (fun (index, (_, bid)) -> (index + 1) * bid)
     |> Array.sum
 
-
 let exampleInput =
     [| "32T3K 765"; "T55J5 684"; "KK677 28"; "KTJJT 220"; "QQQJA 483" |]
+
 problem2 exampleInput |> printfn "Day7 2.ex: %i"
 
 let input = System.IO.File.ReadAllLines "day7_input.txt"
-problem2 input |> printfn "Day7 2: %i" // 249515436
+problem2 input |> (=) 249515436
