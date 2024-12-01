@@ -14,12 +14,12 @@ input
 
 
 input
-||> (fun l r ->
-    let countMap = r |> Array.countBy id |> Map.ofArray
+||> (fun arrL arrR ->
+    let countMap = arrR |> Array.countBy id |> Map.ofArray
 
     let getCount v =
         Map.tryFind v countMap |> Option.defaultValue 0
 
-    l |> Array.map (fun v -> getCount v * v))
+    arrL |> Array.map (fun v -> getCount v * v))
 |> Array.sum
 |> printfn "Day 1b : %i"
