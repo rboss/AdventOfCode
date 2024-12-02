@@ -14,10 +14,8 @@ let isRowSafe (levels: int array) =
 input |> Array.filter isRowSafe |> Array.length |> printfn "Day 2a : %i"
 
 let isRowSafeVariants (levels: int array) =
-    seq {
-        for i in [ 0 .. levels.Length - 1 ] do
-            yield Array.removeAt i levels
-    }
+    seq { 0 .. levels.Length - 1 }
+    |> Seq.map (fun i -> Array.removeAt i levels)
     |> Seq.exists isRowSafe
 
 
