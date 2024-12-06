@@ -1,36 +1,53 @@
 let input =
     "./day6_input.txt" |> System.IO.File.ReadAllLines |> Array.map Seq.toArray
 
-let example =
-    "./day6_example.txt" |> System.IO.File.ReadAllLines |> Array.map Seq.toArray
-
 let labMap =
     input
     |> Array.mapi (fun y row -> row |> Array.mapi (fun x v -> (y, x), v))
     |> Array.collect id
     |> Map.ofArray
 
-let startingPos = Map.findKey (fun _ v -> v = '^') labMap
 let startingDirection = (-1, 0)
-let addDelta (y, x) (dY, dX) = (y + dY, x + dX)
+let movePos (y, x) (dY, dX) = (y + dY, x + dX)
 let rotateRight (y, x) = (x, y * -1)
+let startingPos = Map.findKey (fun _ v -> v = '^') labMap
 
+type Result =
+    | Loop
+    | Exited of Set<(int * int)>
 
-let simulateGuard pos direction map =
-    let rec step acc currDir currentPos =
+let simulateGuard pos startDir map =
+    let rec step visited currDir currentPos =
 
-        let newPos = addDelta currentPos currDir
+        let newPos = movePos currentPos currDir
 
         match Map.tryFind newPos map with
-        | None -> acc
+        | None -> Exited(visited |> Set.map fst)
         | Some('#') ->
             let newDir = rotateRight currDir
-            step acc newDir currentPos
-        | _ -> step (newPos :: acc) currDir newPos
+            step visited newDir currentPos
+        | _ ->
+            if (Set.contains (newPos, currDir) visited) then
+                Loop
+            else
+                step (Set.add (newPos, currDir) visited) currDir newPos
 
-    step [ pos ] direction pos
+    step (Set.ofList [ (pos, startDir) ]) startDir pos
 
-simulateGuard startingPos startingDirection labMap
-|> List.distinct
-|> List.length
-|> printfn "Day 6a : %i"
+let visitedGuard =
+    labMap
+    |> simulateGuard startingPos startingDirection
+    |> function
+        | Loop -> failwith "unexpected stuck in a loop"
+        | Exited visited ->
+            visited |> Set.count |> printfn "Day 6a : %i"
+            visited
+
+#time
+
+visitedGuard
+|> Set.toArray
+|> Array.Parallel.map (fun pos -> simulateGuard startingPos startingDirection (Map.add pos '#' labMap))
+|> Array.filter ((=) Loop)
+|> Array.length
+|> printfn "Day 6b : %i"
