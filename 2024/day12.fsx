@@ -82,8 +82,6 @@ findNextGroup gardenMap []
 |> List.sum
 |> printfn "Day 12a : %i"
 
-#time
-
 findNextGroup gardenMap []
 |> List.map (fun (positions, sides) -> Set.count positions * (calculateFenceCost sides))
 |> List.sum
