@@ -1,4 +1,3 @@
-let example = "./day14_example.txt" |> System.IO.File.ReadAllLines
 let input = "./day14_input.txt" |> System.IO.File.ReadAllLines
 
 #load "Shared.fsx"
@@ -18,7 +17,7 @@ let simulate width height seconds ((x, y), (vx, vy)) =
         let coord = v % length
         if coord < 0 then length + coord else coord
 
-    tileCoord width (x + vx * seconds), tileCoord height (y + vy * seconds)
+    (tileCoord width (x + vx * seconds), tileCoord height (y + vy * seconds)), (vx, vy)
 
 let splitQuadrants width height (arr: (int * int) array) =
     let midW = width / 2
@@ -37,6 +36,48 @@ let tileHeight = 103
 input
 |> Array.map parseRobotRow
 |> Array.map (simulate tileWidth tileHeight 100)
+|> Array.map fst
 |> splitQuadrants tileWidth tileHeight
 |> Array.map (Array.length)
 |> Array.reduce (*)
+|> printfn "Day 14a : %i"
+
+let repeatApply f data =
+    seq {
+        let mutable result = data
+
+        for i in 1 .. System.Int32.MaxValue do
+            result <- (Array.map f result)
+            yield i, result
+    }
+
+let countSequentialNum (numbers: int seq) : int =
+    numbers
+    |> Seq.sort
+    |> Seq.fold (fun (prev, acc) curr -> (curr, (if curr = prev + 1 then acc else acc + 1))) (System.Int32.MinValue, 0)
+    |> snd
+
+let sequentialScore (cords: (int * int) array) =
+    let xSeqential =
+        cords
+        |> Array.groupBy fst
+        |> Array.map (fun (_, cords) -> cords |> Array.map snd |> countSequentialNum)
+
+    let ySequential =
+        cords
+        |> Array.groupBy snd
+        |> Array.map (fun (_, cords) -> cords |> Array.map fst |> countSequentialNum)
+
+    Array.concat [ xSeqential; ySequential ] |> Array.map float |> Array.average
+//
+
+let magic_number = 4.0
+
+input
+|> Array.map parseRobotRow
+|> repeatApply (simulate tileWidth tileHeight 1)
+|> Seq.skipWhile (fun (i, cords) -> cords |> Array.map fst |> sequentialScore >= magic_number)
+|> Seq.take 1
+|> Seq.map fst
+|> Seq.head
+|> printfn "Day 14b : %i"
