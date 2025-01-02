@@ -1,86 +1,96 @@
-let example = "./day15_example.txt" |> System.IO.File.ReadAllLines |> Array.toList
-let input = "./day15_input.txt" |> System.IO.File.ReadAllLines |> Array.toList
+let example = "./day15_example.txt" |> System.IO.File.ReadAllLines
+let input = "./day15_input.txt" |> System.IO.File.ReadAllLines
 
-module Array2D =
-    let tryGet (arr2d: 'a[,]) (y, x) =
-        if (y >= 0 && x >= 0 && y < Array2D.length1 arr2d && x < Array2D.length2 arr2d) then
-            Some arr2d[y, x]
-        else
-            None
+let warehouseMap, directions =
+    let splitIndex = Array.findIndex (fun t -> t = "") input
+    let mapLines, directionsLines = Array.splitAt splitIndex example
 
-    let tryFind needle (arr: 'a[,]) =
-        seq {
-            for i in 0 .. (arr.GetLength 0 - 1) do
-                for j in 0 .. (arr.GetLength 1 - 1) do
-                    if arr.[i, j] = needle then yield Some(i, j) else yield None
-        }
-        |> Seq.tryPick id
+    let map =
+        mapLines
+        |> Array.map Seq.toArray
+        |> Array.mapi (fun y row -> row |> Array.mapi (fun x v -> (y, x), v))
+        |> Array.collect id
+        |> Map.ofArray
 
-    let find needle (arr: 'a[,]) =
-        seq {
-            for i in 0 .. (arr.GetLength 0 - 1) do
-                for j in 0 .. (arr.GetLength 1 - 1) do
-                    if arr.[i, j] = needle then yield Some(i, j) else yield None
-        }
-        |> Seq.pick id
+    let directions = directionsLines |> Array.skip 1 |> Seq.collect id |> Seq.toList
+    map, directions
+
+let robotStartPos = Map.findKey (fun k v -> v = '@') warehouseMap
+
+let directionDelta =
+    function
+    | '<' -> (0, -1)
+    | '>' -> (0, 1)
+    | '^' -> (-1, 0)
+    | 'v' -> (1, 0)
+
+let add (y, x) (dy, dx) = y + dy, x + dx
+
+let rec tryMove pos delta map =
+    // printfn "trying to move pos %A with delta %A" pos delta
+    let movePos = add pos delta
+    let currentVal = Map.find pos map
+
+    match Map.tryFind movePos map with
+    | None
+    | Some '#' -> None
+    | Some '.' ->
+        // printfn "moving pos %A (%A) to %A" pos currentVal movePos
+        let updatedMap = map |> Map.add movePos currentVal |> Map.add pos '.'
+        Some(updatedMap, movePos)
+    | Some 'O' ->
+        match tryMove movePos delta map with
+        | Some(newMap, _) ->
+            // printfn "moving pos %A (%A) to %A" pos currentVal movePos
+            let updatedMap = newMap |> Map.add movePos currentVal |> Map.add pos '.'
+            Some(updatedMap, movePos)
+        | None -> None
+    | Some '@' -> failwith "can't move ontop of robot"
+
+let rec executeDirection map robotPos directions =
+    match directions with
+    | [] -> map
+    | direction :: rest ->
+        let delta = directionDelta direction
+
+        match tryMove robotPos delta map with
+        | Some(newMap, newPos) -> executeDirection newMap newPos rest
+        | None -> executeDirection map robotPos rest
+
+let printMap map =
+    for y in 0..9 do
+        for x in 0..9 do
+            printf "%c" (Map.find (y, x) map)
+
+        printfn ""
+
+    map
+
+printMap warehouseMap
+
+// let move1 = warehouseMap |> tryMove robotStartPos (directionDelta '<')
+// // |> Option.map printMap
+
+let resultMap = executeDirection warehouseMap robotStartPos directions
+resultMap |> printMap
+
+resultMap
+|> Map.filter (fun k v -> v = 'O')
+|> Map.map (fun (y, x) _ -> y * 100 + x)
+|> Map.values
+|> Seq.sum
 
 
-    let flatten (arr2d: 'a[,]) = arr2d |> Seq.cast<'a> |> Seq.toArray
+// let move robot direction =
+//     let delta = directionDelta direction
 
-let findEmptySpot =
-    Array.takeWhile (fun v -> v <> '#') >> Array.tryFindIndex (fun v -> v = '.')
-
-let executeDirections input =
-    let map, directions =
-        let splitIndex = List.findIndex (fun t -> t = "") input
-        let mapLines, directionsLines = List.splitAt splitIndex input
-        let map = array2D mapLines
-        let directions = directionsLines |> List.skip 1 |> Seq.collect id |> Seq.toList
-        map, directions
-
-    let robotStartPos = Array2D.find '@' map
-
-    let rec runMove ((robotY, robotX): int * int) moves =
-        match moves with
-        | [] -> map
-        | move :: rest ->
-            let canMove =
-                match move with
-                | '<' ->
-                    let emptySpace = map[robotY, 0 .. (robotX - 1)] |> Array.rev |> findEmptySpot
-
-                    emptySpace |> Option.map (fun steps -> (0, -1), steps)
-                | '>' ->
-                    let emptySpace = map[robotY, robotX + 1 ..] |> findEmptySpot
-
-                    emptySpace |> Option.map (fun steps -> (0, 1), steps)
-                | '^' ->
-                    let emptySpace = map[0 .. robotY - 1, robotX] |> Array.rev |> findEmptySpot
-
-                    emptySpace |> Option.map (fun steps -> (-1, 0), steps)
-
-                | 'v' ->
-                    let emptySpace = map[robotY + 1 .., robotX] |> findEmptySpot
-
-                    emptySpace |> Option.map (fun steps -> (1, 0), steps)
-
-            match canMove with
-            | Some((dy, dx), steps) ->
-                map[robotY, robotX] <- '.'
-                map[robotY + dy, robotX + dx] <- '@'
-
-                if steps > 0 then
-                    map[robotY + (dy * (steps + 1)), robotX + (dx * (steps + 1))] <- 'O'
-
-                runMove (robotY + dy, robotX + dx) rest
-            | None -> runMove (robotY, robotX) rest
-
-    runMove robotStartPos directions
+//     delta
 
 
-executeDirections input
-|> Array2D.mapi (fun y x c -> c, y * 100 + x)
-|> Array2D.flatten
-|> Array.filter (fun (c, score) -> c = 'O')
-|> Array.map snd
-|> Array.sum
+
+// executeDirections input
+// |> Array2D.mapi (fun y x c -> c, y * 100 + x)
+// |> Array2D.flatten
+// |> Array.filter (fun (c, score) -> c = 'O')
+// |> Array.map snd
+// |> Array.sum
