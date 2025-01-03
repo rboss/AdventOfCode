@@ -45,16 +45,15 @@ let rec tryMove pos delta map =
     | Some ']' as c ->
         if delta = (-1, 0) || delta = (1, 0) then
             maybe {
-                let! newMap, _ = tryMove moveTo delta map
+                let! mapFirstSide, _ = tryMove moveTo delta map
                 let otherSidePos = add moveTo (if c.Value = '[' then (0, 1) else (0, -1))
-                let! newMap2, _ = tryMove otherSidePos delta newMap
-                return newMap2 |> Map.add moveTo tileChar |> Map.add pos '.', moveTo
+                let! mapSecondSide, _ = tryMove otherSidePos delta mapFirstSide
+                return mapSecondSide |> Map.add moveTo tileChar |> Map.add pos '.', moveTo
             }
         else
             maybe {
                 let! newMap, _ = tryMove moveTo delta map
-                let updatedMap = newMap |> Map.add moveTo tileChar |> Map.add pos '.'
-                return updatedMap, moveTo
+                return newMap |> Map.add moveTo tileChar |> Map.add pos '.', moveTo
             }
     | c -> failwithf "Unexpected tile found : %A" c
 
