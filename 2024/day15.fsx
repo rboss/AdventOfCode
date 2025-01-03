@@ -1,21 +1,10 @@
-let example = "./day15_example.txt" |> System.IO.File.ReadAllLines
 let input = "./day15_input.txt" |> System.IO.File.ReadAllLines
 
-let warehouseMap, directions =
-    let splitIndex = Array.findIndex (fun t -> t = "") input
-    let mapLines, directionsLines = Array.splitAt splitIndex example
+type MaybeBuidler() =
+    member this.Bind(m, f) = Option.bind f m
+    member this.Return(x) = Option.Some x
 
-    let map =
-        mapLines
-        |> Array.map Seq.toArray
-        |> Array.mapi (fun y row -> row |> Array.mapi (fun x v -> (y, x), v))
-        |> Array.collect id
-        |> Map.ofArray
-
-    let directions = directionsLines |> Array.skip 1 |> Seq.collect id |> Seq.toList
-    map, directions
-
-let robotStartPos = Map.findKey (fun k v -> v = '@') warehouseMap
+let maybe = new MaybeBuidler()
 
 let directionDelta =
     function
@@ -26,71 +15,95 @@ let directionDelta =
 
 let add (y, x) (dy, dx) = y + dy, x + dx
 
-let rec tryMove pos delta map =
-    // printfn "trying to move pos %A with delta %A" pos delta
-    let movePos = add pos delta
-    let currentVal = Map.find pos map
-
-    match Map.tryFind movePos map with
-    | None
-    | Some '#' -> None
-    | Some '.' ->
-        // printfn "moving pos %A (%A) to %A" pos currentVal movePos
-        let updatedMap = map |> Map.add movePos currentVal |> Map.add pos '.'
-        Some(updatedMap, movePos)
-    | Some 'O' ->
-        match tryMove movePos delta map with
-        | Some(newMap, _) ->
-            // printfn "moving pos %A (%A) to %A" pos currentVal movePos
-            let updatedMap = newMap |> Map.add movePos currentVal |> Map.add pos '.'
-            Some(updatedMap, movePos)
-        | None -> None
-    | Some '@' -> failwith "can't move ontop of robot"
-
-let rec executeDirection map robotPos directions =
-    match directions with
-    | [] -> map
-    | direction :: rest ->
-        let delta = directionDelta direction
-
-        match tryMove robotPos delta map with
-        | Some(newMap, newPos) -> executeDirection newMap newPos rest
-        | None -> executeDirection map robotPos rest
-
 let printMap map =
-    for y in 0..9 do
-        for x in 0..9 do
+    let maxY = Map.fold (fun acc (y, _) _ -> if y > acc then y else acc) 0 map
+    let maxX = Map.fold (fun acc (_, x) _ -> if x > acc then x else acc) 0 map
+
+    for y in 0..maxY do
+        for x in 0..maxX do
             printf "%c" (Map.find (y, x) map)
 
         printfn ""
 
     map
 
-printMap warehouseMap
+let rec tryMove pos delta map =
+    let moveTo = add pos delta
+    let tileChar = Map.find pos map
 
-// let move1 = warehouseMap |> tryMove robotStartPos (directionDelta '<')
-// // |> Option.map printMap
+    match Map.tryFind moveTo map with
+    | None
+    | Some '#' -> None
+    | Some '.' -> Some(map |> Map.add moveTo tileChar |> Map.add pos '.', moveTo)
+    | Some 'O' ->
+        maybe {
+            let! newMap, _ = tryMove moveTo delta map
+            let updatedMap = newMap |> Map.add moveTo tileChar |> Map.add pos '.'
+            return updatedMap, moveTo
+        }
+    | Some '['
+    | Some ']' as c ->
+        if delta = (-1, 0) || delta = (1, 0) then
+            maybe {
+                let! newMap, _ = tryMove moveTo delta map
+                let otherSidePos = add moveTo (if c.Value = '[' then (0, 1) else (0, -1))
+                let! newMap2, _ = tryMove otherSidePos delta newMap
+                return newMap2 |> Map.add moveTo tileChar |> Map.add pos '.', moveTo
+            }
+        else
+            maybe {
+                let! newMap, _ = tryMove moveTo delta map
+                let updatedMap = newMap |> Map.add moveTo tileChar |> Map.add pos '.'
+                return updatedMap, moveTo
+            }
+    | c -> failwithf "Unexpected tile found : %A" c
 
-let resultMap = executeDirection warehouseMap robotStartPos directions
-resultMap |> printMap
+let rec runDirections map robotPos directions =
+    match directions with
+    | [] -> map
+    | direction :: rest ->
+        let delta = directionDelta direction
 
-resultMap
+        match tryMove robotPos delta map with
+        | Some(newMap, newPos) -> runDirections newMap newPos rest
+        | None -> runDirections map robotPos rest
+
+let run rowF input =
+    let warehouseMap, directions =
+        let splitIndex = Array.findIndex (fun t -> t = "") input
+        let mapLines, directionsLines = Array.splitAt splitIndex input
+
+        let map =
+            mapLines
+            |> Array.map rowF
+            |> Array.mapi (fun y row -> row |> Array.mapi (fun x v -> (y, x), v))
+            |> Array.collect id
+            |> Map.ofArray
+
+        let directions = directionsLines |> Array.skip 1 |> Seq.collect id |> Seq.toList
+        map, directions
+
+    let robotStartPos = Map.findKey (fun k v -> v = '@') warehouseMap
+
+    runDirections warehouseMap robotStartPos directions
+
+run Seq.toArray input
 |> Map.filter (fun k v -> v = 'O')
 |> Map.map (fun (y, x) _ -> y * 100 + x)
 |> Map.values
 |> Seq.sum
+|> printfn "Day 15a : %i"
 
+let duplicateTile =
+    function
+    | '@' -> [ '@'; '.' ]
+    | '.' -> [ '.'; '.' ]
+    | 'O' -> [ '['; ']' ]
+    | '#' -> [ '#'; '#' ]
 
-// let move robot direction =
-//     let delta = directionDelta direction
-
-//     delta
-
-
-
-// executeDirections input
-// |> Array2D.mapi (fun y x c -> c, y * 100 + x)
-// |> Array2D.flatten
-// |> Array.filter (fun (c, score) -> c = 'O')
-// |> Array.map snd
-// |> Array.sum
+run (Seq.collect duplicateTile >> Seq.toArray) input
+|> Map.filter (fun k v -> v = '[')
+|> Map.map (fun (y, x) _ -> y * 100 + x)
+|> Map.values
+|> Seq.sum
+|> printfn "Day 15b : %i"
