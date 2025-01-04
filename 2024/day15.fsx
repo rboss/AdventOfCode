@@ -88,9 +88,7 @@ let run rowF input =
 
 run Seq.toArray input
 |> Map.filter (fun k v -> v = 'O')
-|> Map.map (fun (y, x) _ -> y * 100 + x)
-|> Map.values
-|> Seq.sum
+|> Map.fold (fun acc (y, x) _ -> acc + (y * 100 + x)) 0
 |> printfn "Day 15a : %i"
 
 let duplicateTile =
@@ -102,7 +100,5 @@ let duplicateTile =
 
 run (Seq.collect duplicateTile >> Seq.toArray) input
 |> Map.filter (fun k v -> v = '[')
-|> Map.map (fun (y, x) _ -> y * 100 + x)
-|> Map.values
-|> Seq.sum
+|> Map.fold (fun acc (y, x) _ -> acc + (y * 100 + x)) 0
 |> printfn "Day 15b : %i"
