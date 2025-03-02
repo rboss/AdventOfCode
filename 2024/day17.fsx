@@ -89,4 +89,6 @@ let findOutputs instructions =
 
     nextOutput expectedOutputs 0 false
 
-findOutputs instructions |> Seq.head
+findOutputs instructions
+|> Seq.head
+|> fun v -> printfn "Day 17b : %A" v.Value
