@@ -1,71 +1,34 @@
-
 :- set_prolog_flag(double_quotes, chars).
 :- use_module(library(dcg/basics)).
+:- use_module(library(pio)).
 :- use_module(library(dcg/high_order)).
+:- table pattern_exist(_,_,sum).
 
-% pattern([r|X]-X).
-% pattern([w,r|X]-X).
-% pattern([b|X]-X).
-% pattern([g|X]-X).
-% pattern([b,w,u|X]-X).
-% pattern([r,b|X]-X).
-% pattern([g,b|X]-X).
-% pattern([b,r|X]-X).
+pattern(P) --> string_without(`,\n`, P).
+patterns(Ps) --> sequence(pattern, `, `, Ps).
 
-% designs(P-[]):-
-%   pattern(P-[]).
+design(D) --> string_without(`,\n`, D).
+designs(Ds) --> sequence(design, `\n`, Ds).
 
-% designs(P-X):-
-%   pattern(P-S1),
-%   designs(S1-X).
+input(Patterns, Designs) --> 
+  patterns(Patterns), eol, eol, designs(Designs).
 
-% towel(S):- 
-%   designs(S-[]).
+pattern_exist(_, [], 1).
+pattern_exist(Towels, Design, N) :-
+    aggregate_all(sum(W), (member(T, Towels),
+                           append(T, Rest, Design),
+                           pattern_exist(Towels, Rest, W)), N).
 
-pattern --> "r".
-pattern --> "wr".
-pattern --> "b".
-pattern --> "g".
-pattern --> "bwu".
-pattern --> "rb".
-pattern --> "gb".
-pattern --> "br".
+solve(File, P1, P2):-
+  phrase_from_file(input(Patterns, Designs), File),
+  maplist(pattern_exist(Patterns), Designs, Ways),
+  include(<(0), Ways, Out),
+  length(Out, P1),
+  sumlist(Out, P2).
 
-designs --> "".
-designs --> pattern, designs.
-
-as --> "".
-as --> "a", as.
-
-% stock_patterns([]) --> "".
-stock_patterns(Line) --> 
-  % P, ",", blank, stock_patterns(Ps).
-  sequence(string, `, `, Line), eol.
-
-b --> ",", blank.
-
-% //https://stackoverflow.com/questions/14023852/prolog-dcg-parser-with-input-from-file
-% https://github.com/gruhn/advent-of-code/blob/master/2020/Day04.pl
-
-% lines([])           --> eos, !.
-% lines([Line|Lines]) --> line(Line), lines(Lines).
-% line(Ns) --> sequence(integer, ` `, Ns), eol.
-
-% "r, wr, b, g, bwu, rb, gb, br"
-
-
-
-% designs(P-[]):-
-%   pattern(P-[]).
-
-% designs(P-X):-
-%   pattern(P-S1),
-%   designs(S1-X).
-
-% towel(S):- 
-%   designs(S-[]).
 /*
 ['day19.pl'].
-phrase(stock_patterns(Ln), `jds, weq`).  
+solve('input/day19_input.txt', P1, P2).
+solve('input/day19_example.txt', P1, P2).
 
 */
