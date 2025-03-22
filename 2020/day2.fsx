@@ -29,7 +29,7 @@ parseInput input []
 |> tracePrint "problem1 %i"
 
 
-let isValidPassword2 ((min, max, letter, password): PasswordRecord) =
+let isValidPassword3 ((min, max, letter, password): PasswordRecord) =
     (password[min - 1] = letter) <> (password[max - 1] = letter)
 
 parseInput input []
