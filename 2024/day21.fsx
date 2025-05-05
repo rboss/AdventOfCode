@@ -100,10 +100,7 @@ let shortestDirectionKeypad recF n seq =
         |> Seq.length
         |> uint64
     else
-        seq
-        |> directionKeypad
-        |> Seq.map (fun alts -> alts |> Seq.map (recF (n - 1)) |> Seq.min)
-        |> Seq.sum
+        seq |> directionKeypad |> Seq.map (Seq.map (recF (n - 1)) >> Seq.min) |> Seq.sum
 
 let memShortest =
     let dict = System.Collections.Generic.Dictionary<_, _>()
