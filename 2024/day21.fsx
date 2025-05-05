@@ -87,11 +87,9 @@ let numericalFold current next =
     let result = numericPath (current, next) |> List.map (fun v -> v @ [ 'A' ])
     (result, next)
 
-let numericKeypad seq =
-    seq |> Seq.mapFold numericalFold 'A' |> fst
+let numericKeypad = Seq.mapFold numericalFold 'A' >> fst
 
-let directionKeypad seq =
-    seq |> Seq.mapFold directionalFold 'A' |> fst
+let directionKeypad = Seq.mapFold directionalFold 'A' >> fst
 
 let shortestDirectionKeypad recF n seq =
     if n = 1 then
@@ -110,30 +108,30 @@ let shortestDirectionKeypad recF n seq =
 let memShortest =
     let dict = System.Collections.Generic.Dictionary<_, _>()
 
-    let rec step n seq =
+    let rec next n seq =
         let key = sprintf "%i - %A" n seq
         let exist, value = dict.TryGetValue(key)
 
         match exist with
         | true -> value
         | _ ->
-            let value = shortestDirectionKeypad step n seq
+            let value = shortestDirectionKeypad next n seq
             dict.Add(key, value)
             value
 
-    step
+    next
 
-let findShortestSequence keypads seq =
+let findShortestSequenceLength keypadCount seq =
     seq
     |> numericKeypad
-    |> Seq.map (fun alt -> alt |> Seq.map (memShortest keypads) |> Seq.min)
+    |> Seq.map (Seq.map (memShortest keypadCount) >> Seq.min)
     |> Seq.sum
 
-let codeToNumeric (code: string) = code[0 .. (code.Length - 2)] |> int
+let codeToNumeric (code: string) = code[0 .. (code.Length - 2)] |> uint64
 
-let calcCodeComplexity keypads code =
-    let minLength = findShortestSequence keypads code
-    let codeNumeric = codeToNumeric code |> uint64
+let calcCodeComplexity keypadCount code =
+    let minLength = findShortestSequenceLength keypadCount code
+    let codeNumeric = codeToNumeric code
     minLength * codeNumeric
 
 example |> Array.map (calcCodeComplexity 2) |> Array.sum
