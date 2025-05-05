@@ -79,19 +79,6 @@ let directionalPath =
     | x, v when x = v -> [ [] ]
     | x -> failwithf "invalid match case %A" x
 
-let memoize f =
-    let dict = System.Collections.Generic.Dictionary<_, _>()
-
-    fun c ->
-        let exist, value = dict.TryGetValue c
-
-        match exist with
-        | true -> value
-        | _ ->
-            let value = f c
-            dict.Add(c, value)
-            value
-
 let directionalFold current next =
     let result = directionalPath (current, next) |> List.map (fun v -> v @ [ 'A' ])
     (result, next)
@@ -100,66 +87,60 @@ let numericalFold current next =
     let result = numericPath (current, next) |> List.map (fun v -> v @ [ 'A' ])
     (result, next)
 
-let rec permute listsOfLists =
-    match listsOfLists with
-    | list :: rest -> list |> List.collect (fun v -> permute rest |> List.map (fun k -> v :: k))
-    | [] -> [ [] ]
+let numericKeypad seq =
+    seq |> Seq.mapFold numericalFold 'A' |> fst
 
-let numericKeypad2 seq =
+let directionKeypad seq =
+    seq |> Seq.mapFold directionalFold 'A' |> fst
+
+let shortestDirectionKeypad recF n seq =
+    if n = 1 then
+        seq
+        |> directionKeypad
+        |> Seq.map (Seq.minBy Seq.length)
+        |> Seq.collect id
+        |> Seq.length
+        |> uint64
+    else
+        seq
+        |> directionKeypad
+        |> Seq.map (fun alts -> alts |> Seq.map (recF (n - 1)) |> Seq.min)
+        |> Seq.sum
+
+let memShortest =
+    let dict = System.Collections.Generic.Dictionary<_, _>()
+
+    let rec step n seq =
+        let key = sprintf "%i - %A" n seq
+        let exist, value = dict.TryGetValue(key)
+
+        match exist with
+        | true -> value
+        | _ ->
+            let value = shortestDirectionKeypad step n seq
+            dict.Add(key, value)
+            value
+
+    step
+
+let findShortestSequence keypads seq =
     seq
-    |> Seq.mapFold numericalFold 'A'
-    |> fst
-    |> Seq.toList
-    |> List.map (List.collect id)
-
-numericKeypad2 "029" |> List.map (Seq.map string >> String.concat "")
-
-let directionKeypad2 seq =
-    seq
-    |> Seq.mapFold directionalFold 'A'
-    |> fst
-    |> Seq.toList
-    |> permute
-    |> List.map (List.collect id)
-
-let mutable (counter: int) = 0
-let mutable (counter2: int) = 0
-
-let shortestDirectionKeypad seq =
-    counter2 <- counter2 + 1
-    printfn "Seq %A" seq
-    seq |> directionKeypad2 |> Seq.minBy List.length
-
-let (memShortestDir: char seq -> char list) = memoize shortestDirectionKeypad
-
-let shortestDirectionKeypad2 seq =
-    counter <- counter + 1
-    seq |> directionKeypad2 |> Seq.map memShortestDir |> Seq.minBy List.length
-
-let (memShortestDir2: char seq -> char list) = memoize shortestDirectionKeypad2
-
-let findShortestSequence seq =
-    seq
-    |> numericKeypad2
-    |> List.map (fun v -> v |> Seq.map memShortestDir2)
-    |> List.map (fun v -> v |> Seq.toList |> List.collect id)
-    |> List.minBy List.length
+    |> numericKeypad
+    |> Seq.map (fun alt -> alt |> Seq.map (memShortest keypads) |> Seq.min)
+    |> Seq.sum
 
 let codeToNumeric (code: string) = code[0 .. (code.Length - 2)] |> int
 
-// "<" |> directionKeypad2
-// "029A"
-// |> numericKeypad2
-
-let calcCodeComplexity code =
-    let minLength = findShortestSequence code |> List.length
-    let codeNumeric = codeToNumeric code
+let calcCodeComplexity keypads code =
+    let minLength = findShortestSequence keypads code
+    let codeNumeric = codeToNumeric code |> uint64
     minLength * codeNumeric
 
-[ "029A" ] |> List.map calcCodeComplexity
+example |> Array.map (calcCodeComplexity 2) |> Array.sum
 
-input |> Array.map numericKeypad2
-// example |> Array.map calcCodeComplexity |> Array.sum
+input |> Array.map (calcCodeComplexity 2) |> Array.sum |> sprintf "Day 21a : %i"
 
-
-input |> Array.map calcCodeComplexity |> Array.sum |> sprintf "Day 21a : %i" //184180
+input
+|> Array.map (calcCodeComplexity 25)
+|> Array.sum
+|> sprintf "Day 21b : %i"
