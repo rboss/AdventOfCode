@@ -12,7 +12,7 @@ let example = "./input/day23_example.txt" |> System.IO.File.ReadAllLines
 //         P := P \ {v}
 //         X := X ⋃ {v}
 
-let neighboursMap =
+let graph =
     Map.ofList
         [ 6, (Set.ofList [ 4 ])
           5, (Set.ofList [ 4; 2; 1 ])
@@ -21,27 +21,29 @@ let neighboursMap =
           2, (Set.ofList [ 3; 5; 1 ])
           1, (Set.ofList [ 5; 2 ]) ]
 
-let neighbours v = Map.find v neighboursMap
-
-let bronKerbosch1 vertices =
-    let mutable results: Set<int> list = []
+let bronKerbosch1 graphMap =
+    let N v = Map.find v graphMap
 
     let rec kerbosh R P X =
+
         if Set.isEmpty P && Set.isEmpty X then
-            results <- R :: results
+            [ R ]
         else
-            let mutable P = P
-            let mutable X = X
+            P
+            |> Set.fold
+                (fun (acc, P, X) v ->
+                    let newAcc =
+                        let vN = N v
+                        let nextR = Set.add v R
+                        let nextP = Set.intersect P vN
+                        let nextX = Set.intersect X vN
+                        (kerbosh nextR nextP nextX)
 
-            for v in P do
-                let recR = Set.add v R
-                let recP = Set.intersect P (neighbours v)
-                let recX = Set.intersect P (neighbours v)
-                kerbosh recR recP recX
-                P <- (Set.remove v P)
-                X <- Set.add v X
+                    newAcc @ acc, Set.remove v P, Set.add v X)
+                ([], P, X)
+            |> (fun (acc, _, _) -> acc)
 
-    kerbosh Set.empty vertices Set.empty
-    results
+    let vertices = Map.keys graphMap
+    kerbosh Set.empty (Set.ofSeq vertices) Set.empty
 
-bronKerbosch1 (Set.ofList [ 1; 2; 3; 4; 5; 6 ])
+bronKerbosch1 graph
