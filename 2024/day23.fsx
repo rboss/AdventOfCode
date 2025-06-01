@@ -6,20 +6,6 @@ let parseInput (lines: string array) =
         lines
         |> Array.map (fun line -> line.Split('-'))
         |> Array.collect (fun [| c1; c2 |] -> [| c1, c2; c2, c1 |])
-        |> Array.toList
-
-    let allComputers = connections |> List.map fst |> List.distinct
-
-    let connectionsSet c =
-        connections |> List.filter (fun (c1, _) -> c = c1) |> List.map snd |> Set.ofList
-
-    allComputers |> List.map (fun c -> c, connectionsSet c) |> Map.ofList
-
-let parseInput2 (lines: string array) =
-    let connections =
-        lines
-        |> Array.map (fun line -> line.Split('-'))
-        |> Array.collect (fun [| c1; c2 |] -> [| c1, c2; c2, c1 |])
 
     let allComputers = connections |> Array.map fst |> Array.distinct
 
@@ -29,7 +15,7 @@ let parseInput2 (lines: string array) =
     allComputers |> Array.map (fun c -> c, getConnections c) |> readOnlyDict
 
 let part1 (lines: string array) =
-    let connectionsDict = lines |> parseInput2
+    let connectionsDict = lines |> parseInput
 
     connectionsDict.Keys
     |> Seq.collect (fun c1 ->
@@ -74,28 +60,30 @@ let bronKerbosch2 (connectionsDict: System.Collections.Generic.IReadOnlyDictiona
     let sortedGraph =
         connectionsDict
         |> seq
-        |> Seq.sortByDescending (fun pair -> Array.length pair.Value)
-        |> Seq.toList
+        |> Seq.map (fun pair -> pair.Key, pair.Value)
+        |> Seq.sortByDescending (snd >> Array.length)
+        |> Seq.toArray
 
-
-    let neighbours v = connectionsDict[v]
+    let connectionsDictSet =
+        connectionsDict
+        |> Seq.map (fun pair -> pair.Key, Set.ofArray pair.Value)
+        |> readOnlyDict
 
     let choosePivot P U =
         let union = Set.union P U |> Set.toArray
-        sortedGraph |> List.find (fun (x, _) -> Array.contains x union) |> fst
+        sortedGraph |> Array.find (fun (x, _) -> Array.contains x union) |> fst
 
     let rec kerbosh R P X =
-
         if Set.isEmpty P && Set.isEmpty X then
             [ R ]
         else
             let pivot = choosePivot P X
 
-            Set.difference P (neighbours pivot)
+            Set.difference P (connectionsDictSet[pivot])
             |> Set.fold
                 (fun (acc, P, X) v ->
                     let newAcc =
-                        let vN = neighbours v
+                        let vN = connectionsDictSet[v]
                         let nextR = Set.add v R
                         let nextP = Set.intersect P vN
                         let nextX = Set.intersect X vN
@@ -105,12 +93,11 @@ let bronKerbosch2 (connectionsDict: System.Collections.Generic.IReadOnlyDictiona
                 ([], P, X)
             |> (fun (acc, _, _) -> acc)
 
-    let vertices = Map.keys graphMap
-    kerbosh Set.empty (Set.ofSeq vertices) Set.empty
+    kerbosh Set.empty (Set.ofSeq connectionsDict.Keys) Set.empty
 
 let part2 lines =
     lines
-    |> parseInput2
+    |> parseInput
     |> bronKerbosch2
     |> List.sortByDescending Set.count
     |> List.head
