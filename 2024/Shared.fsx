@@ -35,6 +35,17 @@ let tracePrint format a =
     printfn format a
     a
 
+type MaybeBuilder() =  
+    member this.Bind(x, f) = 
+        match x with
+        | Some v -> f v
+        | None -> None
+    member this.Return(v) = 
+        Some v
+    member this.ReturnFrom(v) = 
+        v
+let maybe = new MaybeBuilder()
+
 module Parser =
 
     open System
@@ -298,3 +309,5 @@ module Parser =
     let sepBy1 p sep =
         let sepThenP = sep >>. p
         p .>>. many sepThenP |>> (fun (p, pList) -> p :: pList)
+
+
