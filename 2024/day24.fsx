@@ -155,4 +155,5 @@ let solve2 input =
   |> String.concat ","
 
 solve2 input
-|> tracePrint "Day 24b : %s" //fkb,nnr,rdn,rqf,rrn,z16,z31,z37
+|> tracePrint "Day 24b : %s" 
+|> (=) "fkb,nnr,rdn,rqf,rrn,z16,z31,z37"
