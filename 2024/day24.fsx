@@ -67,7 +67,7 @@ let tryFindGateSorted map = function
   | Xor (i1, i2) -> Map.tryFind (Xor (sortInput (i1, i2))) map
   | Value x -> Map.tryFind (Value x) map
 
-let checkFullAdder gateMap cIn a b = maybe {
+let parseFullAdder gateMap cIn a b = maybe {
   let tryFind = tryFindGateSorted gateMap
   let! xorAB = tryFind(Xor (a, b))
   let! andAB = tryFind(And (a, b))
@@ -81,14 +81,7 @@ let checkFullAdder gateMap cIn a b = maybe {
     return (sum, cout)
 }
 
-let halfAdder gateMap a b =
-  let find x = Map.find x gateMap
-  let sum = find(Xor (sortInput (a, b))) 
-  let cout = find(And (sortInput (a, b)))
-
-  (sum, cout)
-
-let adderPossibleOutputs map cIn a b =
+let findFullAdderOutputs map cIn a b =
   let find x = Map.find x map
 
   let xorAB = find(Xor (sortInput (a, b)))
@@ -114,7 +107,7 @@ let adderPossibleOutputs map cIn a b =
 
   xorAB :: andAB :: cInOuts @ abXorAndOuts
 
-let allPairsSelf list = 
+let allPairsSingle list = 
   List.allPairs list list |> List.filter (fun (x, y) -> x <> y)
 
 let invertMap map = map |> Map.toList |> List.map (fun (k, v) -> v, k) |> Map.ofList
@@ -135,17 +128,17 @@ let solve2 input =
   let gateForPos cin i = 
       let xInput = sprintf "x%02d" i
       let yInput = sprintf "y%02d" i
-      let out = checkFullAdder revGateMap cin xInput yInput
+      let out = parseFullAdder revGateMap cin xInput yInput
       match out with 
       | Some (_, cout) -> [], cout
       | None -> 
-        let outGates = adderPossibleOutputs revGateMap cin xInput yInput
-        let possibleSwapGates = allPairsSelf outGates
+        let outputGates = findFullAdderOutputs revGateMap cin xInput yInput
+        let possibleSwapGates = allPairsSingle outputGates
         possibleSwapGates |> List.pick (fun (g1, g2) -> 
           let swappedMap =  swapMapValues revGateMap g1 g2
-          checkFullAdder swappedMap cin xInput yInput |> Option.map (fun (_, cout) -> [g1; g2], cout))
+          parseFullAdder swappedMap cin xInput yInput |> Option.map (fun (_, cout) -> [g1; g2], cout))
 
-  let (_, cout0) = halfAdder revGateMap "x00" "y00"
+  let cout0 = Map.find (And (sortInput ("x00", "y00"))) revGateMap
 
   [1..(maxZ - 1)] 
   |> List.mapFold gateForPos cout0
